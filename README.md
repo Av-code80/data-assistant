@@ -1,5 +1,7 @@
 # Data Assistant
 
+[![tests](https://github.com/Av-code80/data-assistant/actions/workflows/tests.yml/badge.svg)](https://github.com/Av-code80/data-assistant/actions/workflows/tests.yml)
+
 **Ask a business question in plain French, get the verified numbers from the company
 database in seconds, with the SQL that produced them.**
 
@@ -128,6 +130,7 @@ knowledge/           business glossary, table documentation, data rules (French 
 scripts/             data generation, view layer build, setup check, terminal client
 evals/               retrieval and end-to-end benchmarks
 tests/               unit, API, retrieval quality gate, real integration tests
+.github/workflows/   CI: free tests on every push and pull request
 ```
 
 ## Roadmap
@@ -138,7 +141,8 @@ tests/               unit, API, retrieval quality gate, real integration tests
 - [x] Chart suggestion
 - [ ] Explanation streamed directly from `/questions/ask`
 - [ ] Lint (ruff), coverage, cost report
-- [ ] Docker image and GitHub Actions pipeline (lint, tests, build)
+- [x] GitHub Actions: the free test suite runs on every push
+- [ ] Docker image, lint and build in the pipeline
 - [ ] API key / JWT authentication
 - [ ] Web frontend (React)
 - [ ] Deployment on Cloud Run, monitoring

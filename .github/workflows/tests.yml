@@ -1,0 +1,33 @@
+# Runs the free test suite on every push and pull request: no API key, no paid call.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: .cache/models
+          key: embedding-model-${{ hashFiles('app/config.py') }}
+
+      - name: Build the databases
+        run: |
+          uv run python scripts/generate_data.py
+          uv run python scripts/build_analytics.py
+
+      - name: Run the tests (fake LLM, integration tests skipped)
+        run: uv run pytest -v --ignore=tests/test_integration.py
