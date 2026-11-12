@@ -1,0 +1,31 @@
+[project]
+name = "data-assistant"
+version = "0.3.0"
+description = "Ask business questions in plain French, get verified numbers from the company database: RAG + a text-to-SQL agent on Claude."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.16.0",
+    "duckdb>=2.0.0",
+    "fastapi>=0.156.1",
+    "fastembed>=0.4.2",
+    "numpy>=2.5.4",
+    # Newer onnxruntime versions ship no wheel for Intel Macs on macOS 12.
+    "onnxruntime==1.19.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "onnxruntime>=1.19.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "pandas>=3.1.1",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",          # FastAPI's TestClient
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
