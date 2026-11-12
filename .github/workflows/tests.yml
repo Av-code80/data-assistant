@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # The settings require a key at startup (fail fast in production). CI makes no
+      # paid call: a placeholder is enough, and the real-call tests skip themselves.
+      ANTHROPIC_API_KEY: sk-test-placeholder
     steps:
       - uses: actions/checkout@v4
 
