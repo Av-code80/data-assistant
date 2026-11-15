@@ -24,15 +24,22 @@ realistic synthetic data (8,000 customers, 30,000 orders, 50,000 order items).
   "status": "answered",
   "sql": "SELECT country, ROUND(SUM(revenue), 2) AS revenue FROM sales WHERE order_date BETWEEN '2025-01-01' AND '2025-12-31' GROUP BY country ORDER BY revenue DESC LIMIT 3",
   "columns": ["country", "revenue"],
-  "rows": [["France", 458866.72], ["Germany", 178950.73], ["Spain", 146753.47]],
-  "chart": {"type": "bar", "x": "country", "y": ["revenue"]},
-  "steps": [{"tool": "run_sql", "ok": true}, {"tool": "submit_answer", "ok": true}],
+  "rows": [
+    ["France", 458866.72],
+    ["Germany", 178950.73],
+    ["Spain", 146753.47]
+  ],
+  "chart": { "type": "bar", "x": "country", "y": ["revenue"] },
+  "steps": [
+    { "tool": "run_sql", "ok": true },
+    { "tool": "submit_answer", "ok": true }
+  ],
   "total_cost_usd": 0.043
 }
 ```
 
-(Response shortened: it also carries the interpretation, warnings, cited sources and
-per-stage token usage.)
+Response shortened: it also carries the interpretation, warnings, cited sources and
+per-stage token usage.
 
 ## How it works
 
@@ -42,33 +49,33 @@ question ──> 1. Retrieve ──> 2. Interpret ──> 3. SQL agent ──> 4
              (hybrid RAG)      checked by server  the query          of the result
 ```
 
-| Step | What happens | Why it matters |
-|---|---|---|
-| 1. Retrieve | Hybrid search (multilingual embeddings + BM25, merged with reciprocal rank fusion) over the company glossary and data rules | "Ventes" means what *this* company says it means |
-| 2. Interpret | Claude turns the question into a typed plan (metric, dimensions, filters, period) with structured output | The server, not the model, decides if the question is answerable, needs clarification or is out of scope |
-| 3. SQL agent | A ReAct loop written by hand: the model explores with `run_sql`, then submits with `submit_answer` | It reads its own errors and fixes its query; the server re-runs the final query, so rows never come from the model's text |
-| 4. Explain | The result table is summarised in French, streamed (Server-Sent Events) | Users read an answer, not a table |
+| Step         | What happens                                                                                                                | Why it matters                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1. Retrieve  | Hybrid search (multilingual embeddings + BM25, merged with reciprocal rank fusion) over the company glossary and data rules | "Ventes" means what _this_ company says it means                                                                          |
+| 2. Interpret | Claude turns the question into a typed plan (metric, dimensions, filters, period) with structured output                    | The server, not the model, decides if the question is answerable, needs clarification or is out of scope                  |
+| 3. SQL agent | A ReAct loop written by hand: the model explores with `run_sql`, then submits with `submit_answer`                          | It reads its own errors and fixes its query; the server re-runs the final query, so rows never come from the model's text |
+| 4. Explain   | The result table is summarised in French, streamed (Server-Sent Events)                                                     | Users read an answer, not a table                                                                                         |
 
 ## Reliability, safety, cost
 
-| Concern | How it is handled |
-|---|---|
+| Concern                            | How it is handled                                                                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | The model writes a dangerous query | Defense in depth: DuckDB's parser accepts one `SELECT` only, the database file is opened read-only, file and network access are disabled and locked, every query has a timeout |
-| The model reads data it should not | The agent connects to a separate view layer (sales, customers, products marts): source tables and sensitive columns (product cost) do not exist for it |
-| Wrong business rules | Rules (cancelled items excluded, returned items bring no revenue) are applied once in the view layer, and revenue is reconciled with the source at build time |
-| Periods outside the data | Clamped or rejected by the server, with a warning shown to the user |
-| Runaway agent | At most 6 LLM calls per question |
-| Cost | Every call logs tokens, cost, latency, model and prompt version as JSON; each answer returns its total cost |
-| Model refusal or outage | Server-side fallback model; errors mapped to HTTP 422 / 502 / 503 |
-| Prompt injection through data | Query results and tables are passed as data, with explicit instructions to ignore any text that looks like an instruction |
+| The model reads data it should not | The agent connects to a separate view layer (sales, customers, products marts): source tables and sensitive columns (product cost) do not exist for it                         |
+| Wrong business rules               | Rules (cancelled items excluded, returned items bring no revenue) are applied once in the view layer, and revenue is reconciled with the source at build time                  |
+| Periods outside the data           | Clamped or rejected by the server, with a warning shown to the user                                                                                                            |
+| Runaway agent                      | At most 6 LLM calls per question                                                                                                                                               |
+| Cost                               | Every call logs tokens, cost, latency, model and prompt version as JSON; each answer returns its total cost                                                                    |
+| Model refusal or outage            | Server-side fallback model; errors mapped to HTTP 422 / 502 / 503                                                                                                              |
+| Prompt injection through data      | Query results and tables are passed as data, with explicit instructions to ignore any text that looks like an instruction                                                      |
 
 ## Measured quality
 
-| Benchmark | Result | Run |
-|---|---|---|
-| Retrieval, 20 real questions | hit@3 100 %, hit@1 70 %, MRR 0.85 | `uv run python -m evals.retrieval` |
-| End to end, 10 questions with human-checked reference queries | execution accuracy 100 %, 1.6 tool calls, 0.038 USD and 6.9 s per question | `uv run python -m evals.agent` |
-| Tests | 108 unit and API tests with a fake LLM (free), plus integration tests on the real model | `uv run pytest` |
+| Benchmark                                                     | Result                                                                                  | Run                                |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
+| Retrieval, 20 real questions                                  | hit@3 100 %, hit@1 70 %, MRR 0.85                                                       | `uv run python -m evals.retrieval` |
+| End to end, 10 questions with human-checked reference queries | execution accuracy 100 %, 1.6 tool calls, 0.038 USD and 6.9 s per question              | `uv run python -m evals.agent`     |
+| Tests                                                         | 108 unit and API tests with a fake LLM (free), plus integration tests on the real model | `uv run pytest`                    |
 
 The end-to-end eval compares result rows, not SQL text (two different queries can both
 be right), and exits with code 1 below 80 %, so a CI job can block a bad prompt change.
@@ -101,12 +108,13 @@ uv run pytest -v -rs                               # also real Claude calls when
 
 ## Routes
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/health` | health probe |
-| GET | `/knowledge/search?q=...` | what the RAG retrieves for a question |
-| POST | `/questions/interpret` | question → plan, status, warnings, sources, cost |
-| POST | `/questions/ask` | question → interpretation, SQL, rows, chart suggestion, agent trace, total cost |
+| Method | Path                      | Purpose                                                                         |
+| ------ | ------------------------- | ------------------------------------------------------------------------------- |
+| GET    | `/health`                 | health probe                                                                    |
+| GET    | `/knowledge/search?q=...` | what the RAG retrieves for a question                                           |
+| POST   | `/questions/interpret`    | question → plan, status, warnings, sources, cost                                |
+| POST   | `/questions/ask`          | question → interpretation, SQL, rows, chart suggestion, agent trace, total cost |
+
 | POST | `/answers/stream` | question + result table → explanation (Server-Sent Events) |
 
 ## Layout
